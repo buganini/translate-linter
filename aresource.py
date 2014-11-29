@@ -106,7 +106,11 @@ if __name__ == "__main__":
 			skip_undefined = True
 		elif sys.argv[i] in ("-h", "--help"):
 			print("Usage: {0} input output1 [output2...]\n"
-			"\t--skip-untranslated".format(sys.argv[0]))
+			"\t--skip-untranslated\n"
+			"\t--skip-undefined\n"
+				.format(sys.argv[0])
+			)
+			sys.exit()
 		else:
 			break
 
