@@ -1,7 +1,4 @@
-import os
-import sys
 import re
-import itertools
 
 class Resource(object):
 	string_pattern = r'<string[^>-]*>.*?</string>'
@@ -94,42 +91,84 @@ class Resource(object):
 			return m.group(1)
 		return ""
 
-src = Resource(open(sys.argv[1]).read())
 
-for f in sys.argv[2:]:
-	try:
-		dst = open(f).read()
-	except:
-		dst = ""
-	dpath = os.path.dirname(f)
-	if not os.path.exists(dpath):
-		os.makedirs(dpath)
-	out = open(f, "w")
-	dst = Resource(dst)
-	d = {}
-	for type, name, attr, value, format_hint in dst.tokens():
-		if not type:
-			continue
-		d[(type, name)] = value
+if __name__ == "__main__":
+	import os
+	import sys
 
-	for type, name, attr, value, format_hint in src.tokens():
-		if type=="":
-			out.write(value)
-			continue
-		if type=="string":
-			out.write('<string{0}>{1}</string>'.format(attr, d.get((type, name), value)))
-			continue
-		if type=="string-array":
-			out.write('<string-array{0}>'.format(attr))
-			t = d.get((type, name), value)
-			for i in range(len(value)):
-				out.write('{0}<item>{1}</item>'.format(format_hint[0], t[i]))
-			out.write("{0}</string-array>".format(format_hint[1]))
-			continue
-		if type=="plurals":
-			out.write("<plurals{0}>".format(attr))
-			t = d.get((type, name), value)
-			for k in t:
-				out.write('{0}<item quantity="{1}">{2}</item>'.format(format_hint[0], k, t[k]))
-			out.write("{0}</plurals>".format(format_hint[1]))
-	out.close()
+	skip_untranslated = False
+
+	for i in range(1, len(sys.argv)):
+		if sys.argv[i]=="--skip-untranslated":
+			skip_untranslated = True
+		elif sys.argv[i] in ("-h", "--help"):
+			print("Usage: {0} input output1 [output2...]\n"
+			"\t--skip-untranslated".format(sys.argv[0]))
+		else:
+			break
+
+	src = Resource(open(sys.argv[i]).read())
+
+	for outf in sys.argv[i+1:]:
+		try:
+			dst = open(outf).read()
+		except:
+			dst = ""
+		dpath = os.path.dirname(outf)
+		if not os.path.exists(dpath):
+			os.makedirs(dpath)
+		out = open(outf, "w")
+		dst = Resource(dst)
+		d = {}
+		for type, name, attr, value, format_hint in dst.tokens():
+			if not type:
+				continue
+			d[(type, name)] = value
+
+		for type, name, attr, value, format_hint in src.tokens():
+			if type=="":
+				out.write(value)
+				continue
+			if type=="string":
+				t = d.get((type, name), value)
+				if t==value and skip_untranslated:
+					continue
+				out.write('<string{0}>{1}</string>'.format(attr, t, value))
+				continue
+			if type=="string-array":
+				t = d.get((type, name), value)
+				untranslated = True
+				if len(t) != len(value):
+					untranslated = False
+				else:
+					for i in range(len(t)):
+						if t[i] != value[i]:
+							untranslated = False
+							break
+				if untranslated and skip_untranslated:
+					continue
+				out.write('<string-array{0}>'.format(attr))
+				for i in range(len(value)):
+					out.write('{0}<item>{1}</item>'.format(format_hint[0], t[i]))
+				out.write("{0}</string-array>".format(format_hint[1]))
+				continue
+			if type=="plurals":
+				t = d.get((type, name), value)
+				untranslated = True
+				if len(t) != len(value):
+					untranslated = False
+				else:
+					for k in t:
+						if k not in value:
+							untranslated = False
+							break
+						if t[k] != value[k]:
+							untranslated = False
+							break
+				if untranslated and skip_untranslated:
+					continue
+				out.write("<plurals{0}>".format(attr))
+				for k in t:
+					out.write('{0}<item quantity="{1}">{2}</item>'.format(format_hint[0], k, t[k]))
+				out.write("{0}</plurals>".format(format_hint[1]))
+		out.close()
