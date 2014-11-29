@@ -1,6 +1,6 @@
 Translate Linter
 ------
-	Scripts for re-align strings formats
+Scripts for re-align strings formats
 
 Usage
 ------
@@ -10,5 +10,5 @@ Usage
 
 Modules
 ------
-	Naming convension follows https://github.com/translate/translate/tree/master/translate/storage
+Naming convension follows https://github.com/translate/translate/tree/master/translate/storage
 
