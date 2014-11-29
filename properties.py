@@ -30,11 +30,14 @@ if __name__ == "__main__":
 	import os
 	import sys
 
+	skip_undefined = False
 	skip_untranslated = False
 
 	for i in range(1, len(sys.argv)):
 		if sys.argv[i]=="--skip-untranslated":
 			skip_untranslated = True
+		elif sys.argv[i]=="--skip-undefined":
+			skip_undefined = True
 		elif sys.argv[i] in ("-h", "--help"):
 			print("Usage: {0} input output1 [output2...]\n"
 			"\t--skip-untranslated".format(sys.argv[0]))
@@ -64,6 +67,8 @@ if __name__ == "__main__":
 				out.write(value)
 				continue
 			if type=="string":
+				if (type, name) not in d and skip_undefined:
+					continue
 				t = d.get((type, name), value)
 				if t==value and skip_untranslated:
 					continue
