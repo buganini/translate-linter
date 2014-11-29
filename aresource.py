@@ -133,38 +133,3 @@ for f in sys.argv[2:]:
 				out.write('{0}<item quantity="{1}">{2}</item>'.format(format_hint[0], k, t[k]))
 			out.write("{0}</plurals>".format(format_hint[1]))
 	out.close()
-# 	d = {}
-# 	for tk in tokenizer.findall(dst):
-# 		m = string_pattern.match(tk)
-# 		if m:
-# 			d[m.group(2)]=m.group(3)
-# 			continue
-# 		m = string_array_pattern.match(tk)
-# 		if m:
-# 			d[m.group(2)]=m.group(3)
-# 			continue
-
-# 	out = open(os.path.join("res/values-"+l,f), "w")
-# 	for tk in tokenizer.findall(src):
-# 		m = string_pattern.match(tk)
-# 		if m:
-# 			if m.group(2) in d and d[m.group(2)]==m.group(3):
-# 				continue
-# 			out.write(m.group(1))
-# 			if m.group(2) in d:
-# 				out.write(d[m.group(2)])
-# 			else:
-# 				out.write(m.group(3))
-# 			out.write(m.group(4))
-# 			continue
-# 		m = string_array_pattern.match(tk)
-# 		if m:
-# 			out.write(m.group(1))
-# 			if m.group(2) in d:
-# 				out.write(d[m.group(2)])
-# 			else:
-# 				out.write(m.group(3))
-# 			out.write(m.group(4))
-# 			continue
-# 		out.write(tk)
-# 	out.close()
