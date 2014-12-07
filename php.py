@@ -85,6 +85,7 @@ if __name__ == "__main__":
 	import os
 	import sys
 
+	remove_trailing_spaces = False
 	skip_undefined = False
 	skip_untranslated = False
 
@@ -93,17 +94,25 @@ if __name__ == "__main__":
 			skip_untranslated = True
 		elif sys.argv[i]=="--skip-undefined":
 			skip_undefined = True
+		elif sys.argv[i]=="--remove-trailing-spaces":
+			remove_trailing_spaces = True
 		elif sys.argv[i] in ("-h", "--help"):
 			print("Usage: {0} input output1 [output2...]\n"
 			"\t--skip-untranslated\n"
 			"\t--skip-undefined\n"
+			"\t--remove-trailing-spaces\n"
 				.format(sys.argv[0])
 			)
 			sys.exit()
 		else:
 			break
 
-	src = Php(open(sys.argv[i]).read())
+	src = open(sys.argv[i]).read()
+	if remove_trailing_spaces:
+		bak = src
+		src = re.sub(r"\s*$", "", src, flags=re.M)
+	src = Php(src)
+
 	for outf in sys.argv[i+1:]:
 		try:
 			dst = open(outf).read()
