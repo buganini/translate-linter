@@ -11,4 +11,3 @@ Usage
 Modules
 ------
 Naming convension follows https://github.com/translate/translate/tree/master/translate/storage
-
