@@ -11,6 +11,7 @@ class Resource(object):
 	text_re = re.compile(r'<string[^>-]*>(.*?)</string>', re.S)
 	item_re = re.compile(r'(\s*)<item([^>]*)>(.*?)</item>', re.S)
 	name_re = re.compile(r'\s*name="(.*?)"', re.S)
+	translatable_re = re.compile(r'\s*translatable="(.*?)"', re.S)
 	qty_re = re.compile(r'\s*quantity="(.*?)"', re.S)
 	trail_re = re.compile(r'.*?</item>(\s*)</\S+?>', re.S)
 
@@ -28,7 +29,10 @@ class Resource(object):
 			if self.string_re.match(tk):
 				attr = self.get_attributes(tk)
 				name = self.get_name(attr)
-				yield ("string", name, attr, self.get_text(tk), "")
+				if self.get_translatable(attr)=="false":
+					yield ("", "", "", tk, "")
+				else:
+					yield ("string", name, attr, self.get_text(tk), "")
 			elif self.string_array_re.match(tk):
 				attr = self.get_attributes(tk)
 				name = self.get_name(attr)
@@ -41,7 +45,10 @@ class Resource(object):
 				else:
 					sep = ""
 				trail = self.get_trail(tk)
-				yield ("string-array", name, attr, value, (sep, trail))
+				if self.get_translatable(attr)=="false":
+					yield ("", "", "", tk, "")
+				else:
+					yield ("string-array", name, attr, value, (sep, trail))
 			elif self.plurals_re.match(tk):
 				attr = self.get_attributes(tk)
 				name = self.get_name(attr)
@@ -67,6 +74,13 @@ class Resource(object):
 
 	@classmethod
 	def get_name(cls, attr):
+		m = cls.name_re.match(attr)
+		if m:
+			return m.group(1)
+		return ""
+
+	@classmethod
+	def get_translatable(cls, attr):
 		m = cls.name_re.match(attr)
 		if m:
 			return m.group(1)
