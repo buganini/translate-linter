@@ -3,10 +3,13 @@
 import re
 
 class Resource(object):
-	string_pattern = r'<string[^>-]*>.*?</string>'
-	string_array_pattern = r'<string-array[^>-]*>.*?</string-array>'
-	plurals_pattern = r'<plurals[^>-]*>.*?</plurals>'
-	tokenizer = re.compile("({0})".format("|".join([string_pattern, string_array_pattern, plurals_pattern, ".+?"])), re.S)
+	string_pattern = r'<string[^>/-]*>.*?</string>'
+	string_array_pattern = r'<string-array[^>/-]*>.*?</string-array>'
+	plurals_pattern = r'<plurals[^>/-]*>.*?</plurals>'
+	closed_string_pattern = r'<string[^>/-]*/>'
+	closed_string_array_pattern = r'<string-array[^>/-]*/>'
+	closed_plurals_pattern = r'<plurals[^>/-]*/>'
+	tokenizer = re.compile("({0})".format("|".join([string_pattern, closed_string_pattern, string_array_pattern, closed_string_array_pattern, plurals_pattern, closed_plurals_pattern, ".+?"])), re.S)
 	attributes_re = re.compile(r'<\S+(.*?)>', re.S)
 	text_re = re.compile(r'<string[^>-]*>(.*?)</string>', re.S)
 	item_re = re.compile(r'(\s*)<item([^>]*)>(.*?)</item>', re.S)
@@ -20,6 +23,9 @@ class Resource(object):
 		self.string_re = re.compile(self.string_pattern, re.S)
 		self.string_array_re = re.compile(self.string_array_pattern, re.S)
 		self.plurals_re = re.compile(self.plurals_pattern, re.S)
+		self.closed_string_re = re.compile(self.closed_string_pattern, re.S)
+		self.closed_string_array_re = re.compile(self.closed_string_array_pattern, re.S)
+		self.closed_plurals_re = re.compile(self.closed_plurals_pattern, re.S)
 
 	def tokens(self):
 		for tk in self.tokenizer.findall(self.xml):
@@ -62,6 +68,12 @@ class Resource(object):
 					sep = ""
 				trail = self.get_trail(tk)
 				yield ("plurals", name, attr, value, (sep, trail))
+			elif self.closed_string_re.match(tk):
+				pass
+			elif self.closed_string_array_re.match(tk):
+				pass
+			elif self.closed_plurals_re.match(tk):
+				pass
 			else:
 				yield ("", "", "", tk, "")
 
