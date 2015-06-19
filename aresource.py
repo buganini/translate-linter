@@ -183,7 +183,7 @@ if __name__ == "__main__":
 				t = d.get((type, name), value)
 				if t==value and skip_untranslated:
 					continue
-				out.write('<string{0}>{1}</string>'.format(attr, t, value))
+				out.write('<string{0}>{1}</string>'.format(attr, t))
 				continue
 			if type=="string-array":
 				if (type, name) not in d and skip_undefined:
