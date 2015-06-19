@@ -69,7 +69,12 @@ class Resource(object):
 				trail = self.get_trail(tk)
 				yield ("plurals", name, attr, value, (sep, trail))
 			elif self.closed_string_re.match(tk):
-				pass
+				attr = self.get_attributes(tk)
+				name = self.get_name(attr)
+				if self.get_translatable(attr)=="false":
+					yield ("", "", "", tk, "")
+				else:
+					yield ("string", name, attr, "", "")
 			elif self.closed_string_array_re.match(tk):
 				pass
 			elif self.closed_plurals_re.match(tk):
