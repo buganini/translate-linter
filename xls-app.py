@@ -40,9 +40,11 @@ android_key = u"Android"
 android_folder_key = u"Android folder"
 android_file_key = u"Android file"
 android_arg_key = u"Android arg"
+android_default_name = u"strings"
 ios_key = u"iOS"
 ios_file_key = u"iOS file"
 ios_arg_key = u"iOS arg"
+ios_default_name = u"Localizable"
 
 ios_locale_map = {"tw":"zh-Hant", "cn":"zh-Hans"}
 android_locale_map = {"tw":"zh-rTW", "cn":"zh-rCN"}
@@ -155,9 +157,12 @@ for sheet in xls.sheets():
 					folder = unicode(sheet.cell(r, android_folder_key_col).value).strip(u"/") + u"/"
 
 				if android_file_key_col < 0:
-					file = u"strings"
+					file = android_default_name
 				else:
 					file = sheet.cell(r, android_file_key_col).value
+
+				if file == u"":
+					file = android_default_name
 
 				if lang == main_lang_key:
 					aLang = u""
@@ -190,9 +195,12 @@ for sheet in xls.sheets():
 					va[i] = va[i].replace(u"%", u"%%")
 
 				if ios_file_key_col < 0:
-					file = u"Localizable"
+					file = ios_default_name
 				else:
 					file = sheet.cell(r, ios_file_key_col).value
+
+				if file == u"":
+					file = ios_default_name
 
 				iLang = ios_locale_map.get(lang, lang)
 				fk = (iLang, file)
