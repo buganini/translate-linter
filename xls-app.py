@@ -159,11 +159,14 @@ for sheet in xls.sheets():
 				else:
 					file = sheet.cell(r, android_file_key_col).value
 
-				aLang = android_locale_map.get(lang, lang)
+				if lang == main_lang_key:
+					aLang = u""
+				else:
+					aLang = u"-" + android_locale_map.get(lang, lang)
 
 				fk = (folder, aLang, file)
 				if fk not in aF:
-					aPath = os.path.join(sys.argv[2], u"android-strings/{0}values-{1}/{2}.xml".format(folder, aLang, file).encode("utf-8"))
+					aPath = os.path.join(sys.argv[2], u"android-strings/{0}values{1}/{2}.xml".format(folder, aLang, file).encode("utf-8"))
 					d = os.path.dirname(aPath)
 					if not os.path.exists(d):
 						os.makedirs(d)
