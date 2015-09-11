@@ -49,7 +49,7 @@ ios_arg_key = u"iOS arg"
 ios_default_name = u"Localizable"
 
 ios_locale_map = {"tw":"zh-Hant", "cn":"zh-Hans"}
-android_locale_map = {"tw":"zh-rTW", "cn":"zh-rCN"}
+android_locale_map = {"tw":"zh-rTW", "cn":"zh-rCN", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv"}
 
 main_lang_key = u"en"
 lang_key = [u"tw", u"cn", u"jp", u"kr", u"ru", u"de", u"fr", u"it", u"es", u"pt", u"hu", u"cz", u"nl", u"pl", u"se", u"el"]
