@@ -37,6 +37,7 @@ def strip(s):
 	return re.sub(r"\([^()]*\)", "", s).strip()
 
 android_key = u"Android"
+android_folder_key = u"Android folder"
 android_file_key = u"Android file"
 android_arg_key = u"Android arg"
 ios_key = u"iOS"
@@ -62,6 +63,7 @@ for sheet in xls.sheets():
 	lang_key_col = {}
 	main_lang_key_col = -1
 	android_key_col = -1
+	android_folder_key_col = -1
 	android_file_key_col = -1
 	android_arg_key_col = -1
 	ios_key_col = -1
@@ -71,6 +73,8 @@ for sheet in xls.sheets():
 		value = strip(sheet.cell(0, c).value)
 		if value == android_key:
 			android_key_col = c
+		if value == android_folder_key:
+			android_folder_key_col = c
 		if value == android_file_key:
 			android_file_key_col = c
 		if value == android_arg_key:
@@ -145,15 +149,21 @@ for sheet in xls.sheets():
 				for i in range(0, len(va), 2):
 					va[i] = va[i].replace(u"%", u"%%")
 
+				if android_folder_key_col < 0:
+					folder = u""
+				else:
+					folder = unicode(sheet.cell(r, android_folder_key_col).value).strip(u"/") + u"/"
+
 				if android_file_key_col < 0:
 					file = u"strings"
 				else:
 					file = sheet.cell(r, android_file_key_col).value
 
 				aLang = android_locale_map.get(lang, lang)
-				fk = (aLang, file)
+
+				fk = (folder, aLang, file)
 				if fk not in aF:
-					aPath = os.path.join(sys.argv[2], u"android-strings/values-{0}/{1}.xml".format(aLang, file).encode("utf-8"))
+					aPath = os.path.join(sys.argv[2], u"android-strings/{0}values-{1}/{2}.xml".format(folder, aLang, file).encode("utf-8"))
 					d = os.path.dirname(aPath)
 					if not os.path.exists(d):
 						os.makedirs(d)
