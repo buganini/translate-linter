@@ -28,6 +28,8 @@ def split(pat, s):
 def aescape(s):
 	s = xml_escape(s)
 	s = AndroidResourceUnit.escape(s)
+	if s in (u"@", u"?"):
+		s = u"\\" + s
 	return s
 
 def iescape(s):
