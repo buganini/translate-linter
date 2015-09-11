@@ -48,7 +48,7 @@ ios_file_key = u"iOS file"
 ios_arg_key = u"iOS arg"
 ios_default_name = u"Localizable"
 
-ios_locale_map = {"tw":"zh-Hant", "cn":"zh-Hans"}
+ios_locale_map = {"tw":"zh-Hant", "cn":"zh-Hans", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv"}
 android_locale_map = {"tw":"zh-rTW", "cn":"zh-rCN", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv"}
 
 main_lang_key = u"en"
