@@ -154,7 +154,10 @@ for sheet in xls.sheets():
 				if android_folder_key_col < 0:
 					folder = u""
 				else:
-					folder = unicode(sheet.cell(r, android_folder_key_col).value).strip(u"/") + u"/"
+					folder = unicode(sheet.cell(r, android_folder_key_col).value).strip(u"/ ")
+
+				if folder != u"":
+					folder += u"/"
 
 				if android_file_key_col < 0:
 					file = android_default_name
