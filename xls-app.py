@@ -57,6 +57,8 @@ skip_sheet = [0,1,2]
 
 aF={}
 iF={}
+aKeys = set()
+iKeys = set()
 
 xls = xlrd.open_workbook(sys.argv[1])
 
@@ -121,20 +123,42 @@ for sheet in xls.sheets():
 				argMap[k] = pos
 				pos += 1
 
+		if android_folder_key_col < 0:
+			folder = u""
+		else:
+			folder = unicode(sheet.cell(r, android_folder_key_col).value).strip(u"/ ")
+
+		if folder != u"":
+			folder += u"/"
+
+		aKey = sheet.cell(r, android_key_col).value
+		iKey = sheet.cell(r, ios_key_col).value
+
+		if android_arg_key_col < 0:
+			aArg = []
+		else:
+			aArg = sheet.cell(r, android_arg_key_col).value.split(u",")
+
+		if ios_arg_key_col < 0:
+			iArg = []
+		else:
+			iArg = sheet.cell(r, ios_arg_key_col).value.split(u",")
+
+		if aKey != "":
+			kk = (folder, aKey)
+			if kk in aKeys:
+				print(u"Duplicated Android key: {0}".format(kk))
+			else:
+				aKeys.add(kk)
+
+		if iKey != "":
+			kk = iKey
+			if kk in iKeys:
+				print(u"Duplicated iOS key: {0}".format(kk))
+			else:
+				iKeys.add(kk)
+
 		for lang in [main_lang_key] + lang_key:
-			aKey = sheet.cell(r, android_key_col).value
-			iKey = sheet.cell(r, ios_key_col).value
-
-			if android_arg_key_col < 0:
-				aArg = []
-			else:
-				aArg = sheet.cell(r, android_arg_key_col).value.split(u",")
-
-			if ios_arg_key_col < 0:
-				iArg = []
-			else:
-				iArg = sheet.cell(r, ios_arg_key_col).value.split(u",")
-
 			value = sheet.cell(r, lang_key_col[lang]).value.strip()
 			if value == u"":
 				continue
@@ -152,14 +176,6 @@ for sheet in xls.sheets():
 
 				for i in range(0, len(va), 2):
 					va[i] = va[i].replace(u"%", u"%%")
-
-				if android_folder_key_col < 0:
-					folder = u""
-				else:
-					folder = unicode(sheet.cell(r, android_folder_key_col).value).strip(u"/ ")
-
-				if folder != u"":
-					folder += u"/"
 
 				if android_file_key_col < 0:
 					file = android_default_name
