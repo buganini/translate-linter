@@ -52,7 +52,7 @@ ios_locale_map = {"tw":"zh-Hant", "cn":"zh-Hans", "jp":"ja", "kr":"ko", "cz":"cs
 android_locale_map = {"tw":"zh-rTW", "cn":"zh-rCN", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv", "pt-BR":"pt-rBR"}
 
 
-def conv(xls_path, output_dir, main_lang_key="en", lang_key = [], skip_sheet = []):
+def conv(xls_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip_sheet = []):
 	aF={}
 	iF={}
 	aKeys = set()
@@ -94,20 +94,20 @@ def conv(xls_path, output_dir, main_lang_key="en", lang_key = [], skip_sheet = [
 			lang_key_col[value] = c
 
 		if main_lang_key_col < 0:
-			print("Main language key column not found in sheet {0}".format(sheet.number))
+			outlog.write("Main language key column not found in sheet {0}\n".format(sheet.number))
 			sys.exit(1)
 
 		if android_key_col < 0:
-			print("Android key column not found in sheet {0}".format(sheet.number))
+			outlog.write(u"Android key column not found in sheet {0}\n".format(sheet.number).encode("utf-8"))
 			sys.exit(1)
 
 		if ios_key_col < 0:
-			print("iOS key column not found")
+			outlog.write(u"iOS key column not found\n".encode("utf-8"))
 			sys.exit(1)
 
 		for lang in lang_key:
 			if lang not in lang_key_col:
-				print("{0} key column not found".format(lang))
+				outlog.write(u"{0} key column not found\n".format(lang).encode("utf-8"))
 				sys.exit(1)
 
 
@@ -145,14 +145,14 @@ def conv(xls_path, output_dir, main_lang_key="en", lang_key = [], skip_sheet = [
 			if aKey != "":
 				kk = (folder, aKey)
 				if kk in aKeys:
-					print(u"Duplicated Android key: {0}".format(kk))
+					outlog.write(u"Duplicated Android key: {0}\n".format(kk).encode("utf-8"))
 				else:
 					aKeys.add(kk)
 
 			if iKey != "":
 				kk = iKey
 				if kk in iKeys:
-					print(u"Duplicated iOS key: {0}".format(kk))
+					outlog.write(u"Duplicated iOS key: {0}\n".format(kk).encode("utf-8"))
 				else:
 					iKeys.add(kk)
 
@@ -168,7 +168,7 @@ def conv(xls_path, output_dir, main_lang_key="en", lang_key = [], skip_sheet = [
 						if ai < len(aArg):
 							arg = aArg[ai]
 						else:
-							print("Sheet \"{0}\": Undefined arg for Android key: {1}[{2}]".format(sheet.name, aKey, va[i]))
+							outlog.write("Sheet \"{0}\": Undefined arg for Android key: {1}[{2}]\n".format(sheet.name, aKey, va[i]).encode("utf-8"))
 							sys.exit()
 						va[i] = u"%{0}${1}".format(ai+1, arg)
 
@@ -206,7 +206,7 @@ def conv(xls_path, output_dir, main_lang_key="en", lang_key = [], skip_sheet = [
 						if ai < len(iArg):
 							arg = iArg[ai]
 						else:
-							print("Sheet \"{0}\": Undefined arg for iOS key: {1}[{2}]".format(sheet.name, iKey, va[i]))
+							outlog.write("Sheet \"{0}\": Undefined arg for iOS key: {1}[{2}]\n".format(sheet.name, iKey, va[i]).encode("utf-8"))
 							sys.exit()
 						va[i] = u"%{0}${1}".format(ai+1, arg)
 
@@ -244,4 +244,4 @@ if __name__ == "__main__":
 	lang_key = [u"tw", u"cn", u"jp", u"kr", u"ru", u"de", u"fr", u"it", u"es", u"pt", u"hu", u"cz", u"nl", u"pl", u"se", u"el"]
 	skip_sheet = [0,1,2]
 
-	conv(sys.argv[1], sys.argv[2], main_lang_key, lang_key, skip_sheet)
+	conv(sys.argv[1], sys.argv[2], sys.stdout, main_lang_key, lang_key, skip_sheet)
