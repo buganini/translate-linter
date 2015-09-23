@@ -49,194 +49,199 @@ ios_arg_key = u"iOS arg"
 ios_default_name = u"Localizable"
 
 ios_locale_map = {"tw":"zh-Hant", "cn":"zh-Hans", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv"}
-android_locale_map = {"tw":"zh-rTW", "cn":"zh-rCN", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv"}
+android_locale_map = {"tw":"zh-rTW", "cn":"zh-rCN", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv", "pt-BR":"pt-rBR"}
 
-main_lang_key = u"en"
-lang_key = [u"tw", u"cn", u"jp", u"kr", u"ru", u"de", u"fr", u"it", u"es", u"pt", u"hu", u"cz", u"nl", u"pl", u"se", u"el"]
-skip_sheet = [0,1,2]
 
-aF={}
-iF={}
-aKeys = set()
-iKeys = set()
+def conv(xls_path, main_lang_key="en", lang_key = [], skip_sheet = []):
+	aF={}
+	iF={}
+	aKeys = set()
+	iKeys = set()
 
-xls = xlrd.open_workbook(sys.argv[1])
+	xls = xlrd.open_workbook(xls_path)
 
-for sheet in xls.sheets():
-	if sheet.number in skip_sheet:
-		continue
+	for sheet in xls.sheets():
+		if sheet.number in skip_sheet:
+			continue
 
-	lang_key_col = {}
-	main_lang_key_col = -1
-	android_key_col = -1
-	android_folder_key_col = -1
-	android_file_key_col = -1
-	android_arg_key_col = -1
-	ios_key_col = -1
-	ios_file_key_col = -1
-	ios_arg_key_col = -1
-	for c in range(0, sheet.ncols):
-		value = strip(sheet.cell(0, c).value)
-		if value == android_key:
-			android_key_col = c
-		if value == android_folder_key:
-			android_folder_key_col = c
-		if value == android_file_key:
-			android_file_key_col = c
-		if value == android_arg_key:
-			android_arg_key_col = c
-		if value == ios_key:
-			ios_key_col = c
-		if value == ios_file_key:
-			ios_file_key_col = c
-		if value == ios_arg_key:
-			ios_arg_key_col = c
-		if value == main_lang_key:
-			main_lang_key_col = c
-		lang_key_col[value] = c
+		lang_key_col = {}
+		main_lang_key_col = -1
+		android_key_col = -1
+		android_folder_key_col = -1
+		android_file_key_col = -1
+		android_arg_key_col = -1
+		ios_key_col = -1
+		ios_file_key_col = -1
+		ios_arg_key_col = -1
+		for c in range(0, sheet.ncols):
+			value = strip(sheet.cell(0, c).value)
+			if value == android_key:
+				android_key_col = c
+			if value == android_folder_key:
+				android_folder_key_col = c
+			if value == android_file_key:
+				android_file_key_col = c
+			if value == android_arg_key:
+				android_arg_key_col = c
+			if value == ios_key:
+				ios_key_col = c
+			if value == ios_file_key:
+				ios_file_key_col = c
+			if value == ios_arg_key:
+				ios_arg_key_col = c
+			if value == main_lang_key:
+				main_lang_key_col = c
+			lang_key_col[value] = c
 
-	if main_lang_key_col < 0:
-		print("Main language key column not found in sheet {0}".format(sheet.number))
-		sys.exit(1)
-
-	if android_key_col < 0:
-		print("Android key column not found in sheet {0}".format(sheet.number))
-		sys.exit(1)
-
-	if ios_key_col < 0:
-		print("iOS key column not found")
-		sys.exit(1)
-
-	for lang in lang_key:
-		if lang not in lang_key_col:
-			print("{0} key column not found".format(lang))
+		if main_lang_key_col < 0:
+			print("Main language key column not found in sheet {0}".format(sheet.number))
 			sys.exit(1)
 
+		if android_key_col < 0:
+			print("Android key column not found in sheet {0}".format(sheet.number))
+			sys.exit(1)
 
-	for r in range(1, sheet.nrows):
-		argMap = {}
-		value = sheet.cell(r, main_lang_key_col).value.strip()
-		keys = split("%[^%]+%", value)[1::2]
-		pos = 0
-		for k in keys:
-			if k not in argMap:
-				argMap[k] = pos
-				pos += 1
+		if ios_key_col < 0:
+			print("iOS key column not found")
+			sys.exit(1)
 
-		if android_folder_key_col < 0:
-			folder = u""
-		else:
-			folder = unicode(sheet.cell(r, android_folder_key_col).value).strip(u"/ ")
+		for lang in lang_key:
+			if lang not in lang_key_col:
+				print("{0} key column not found".format(lang))
+				sys.exit(1)
 
-		if folder != u"":
-			folder += u"/"
 
-		aKey = sheet.cell(r, android_key_col).value
-		iKey = sheet.cell(r, ios_key_col).value
+		for r in range(1, sheet.nrows):
+			argMap = {}
+			value = sheet.cell(r, main_lang_key_col).value.strip()
+			keys = split("%[^%]+%", value)[1::2]
+			pos = 0
+			for k in keys:
+				if k not in argMap:
+					argMap[k] = pos
+					pos += 1
 
-		if android_arg_key_col < 0:
-			aArg = []
-		else:
-			aArg = sheet.cell(r, android_arg_key_col).value.split(u",")
-
-		if ios_arg_key_col < 0:
-			iArg = []
-		else:
-			iArg = sheet.cell(r, ios_arg_key_col).value.split(u",")
-
-		if aKey != "":
-			kk = (folder, aKey)
-			if kk in aKeys:
-				print(u"Duplicated Android key: {0}".format(kk))
+			if android_folder_key_col < 0:
+				folder = u""
 			else:
-				aKeys.add(kk)
+				folder = unicode(sheet.cell(r, android_folder_key_col).value).strip(u"/ ")
 
-		if iKey != "":
-			kk = iKey
-			if kk in iKeys:
-				print(u"Duplicated iOS key: {0}".format(kk))
+			if folder != u"":
+				folder += u"/"
+
+			aKey = sheet.cell(r, android_key_col).value
+			iKey = sheet.cell(r, ios_key_col).value
+
+			if android_arg_key_col < 0:
+				aArg = []
 			else:
-				iKeys.add(kk)
+				aArg = sheet.cell(r, android_arg_key_col).value.split(u",")
 
-		for lang in [main_lang_key] + lang_key:
-			value = sheet.cell(r, lang_key_col[lang]).value.strip()
-			if value == u"":
-				continue
+			if ios_arg_key_col < 0:
+				iArg = []
+			else:
+				iArg = sheet.cell(r, ios_arg_key_col).value.split(u",")
 
 			if aKey != "":
-				va = split("%[^%]+%", value)
-				for i in range(1, len(va), 2):
-					ai = argMap[va[i]]
-					if ai < len(aArg):
-						arg = aArg[ai]
-					else:
-						print("Sheet \"{0}\": Undefined arg for Android key: {1}[{2}]".format(sheet.name, aKey, va[i]))
-						sys.exit()
-					va[i] = u"%{0}${1}".format(ai+1, arg)
-
-				for i in range(0, len(va), 2):
-					va[i] = va[i].replace(u"%", u"%%")
-
-				if android_file_key_col < 0:
-					file = android_default_name
+				kk = (folder, aKey)
+				if kk in aKeys:
+					print(u"Duplicated Android key: {0}".format(kk))
 				else:
-					file = sheet.cell(r, android_file_key_col).value
-
-				if file == u"":
-					file = android_default_name
-
-				if lang == main_lang_key:
-					aLang = u""
-				else:
-					aLang = u"-" + android_locale_map.get(lang, lang)
-
-				fk = (folder, aLang, file)
-				if fk not in aF:
-					aPath = os.path.join(sys.argv[2], u"android-strings/{0}values{1}/{2}.xml".format(folder, aLang, file).encode("utf-8"))
-					d = os.path.dirname(aPath)
-					if not os.path.exists(d):
-						os.makedirs(d)
-					aF[fk] = open(aPath, "w")
-					aF[fk].write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n");
-
-				aF[fk].write(u"\t<string name=\"{0}\">{1}</string>\n".format(aKey, aescape(u"".join(va))).encode("utf-8"))
+					aKeys.add(kk)
 
 			if iKey != "":
-				va = split("%[^%]+%", value)
-				for i in range(1, len(va), 2):
-					ai = argMap[va[i]]
-					if ai < len(iArg):
-						arg = iArg[ai]
-					else:
-						print("Sheet \"{0}\": Undefined arg for iOS key: {1}[{2}]".format(sheet.name, iKey, va[i]))
-						sys.exit()
-					va[i] = u"%{0}${1}".format(ai+1, arg)
-
-				for i in range(0, len(va), 2):
-					va[i] = va[i].replace(u"%", u"%%")
-
-				if ios_file_key_col < 0:
-					file = ios_default_name
+				kk = iKey
+				if kk in iKeys:
+					print(u"Duplicated iOS key: {0}".format(kk))
 				else:
-					file = sheet.cell(r, ios_file_key_col).value
+					iKeys.add(kk)
 
-				if file == u"":
-					file = ios_default_name
+			for lang in [main_lang_key] + lang_key:
+				value = sheet.cell(r, lang_key_col[lang]).value.strip()
+				if value == u"":
+					continue
 
-				iLang = ios_locale_map.get(lang, lang)
-				fk = (iLang, file)
-				if fk not in iF:
-					iPath = os.path.join(sys.argv[2], u"ios-strings/{0}.lproj/{1}.strings".format(iLang, file).encode("utf-8"))
-					d = os.path.dirname(iPath)
-					if not os.path.exists(d):
-						os.makedirs(d)
-					iF[fk] = open(iPath, "w")
+				if aKey != "":
+					va = split("%[^%]+%", value)
+					for i in range(1, len(va), 2):
+						ai = argMap[va[i]]
+						if ai < len(aArg):
+							arg = aArg[ai]
+						else:
+							print("Sheet \"{0}\": Undefined arg for Android key: {1}[{2}]".format(sheet.name, aKey, va[i]))
+							sys.exit()
+						va[i] = u"%{0}${1}".format(ai+1, arg)
 
-				iF[fk].write(u"\"{0}\" = \"{1}\";\n".format(iKey, iescape(u"".join(va))).encode("utf-8"))
+					for i in range(0, len(va), 2):
+						va[i] = va[i].replace(u"%", u"%%")
 
-for fk in aF:
-	aF[fk].write("</resources>\n");
-	aF[fk].close()
+					if android_file_key_col < 0:
+						file = android_default_name
+					else:
+						file = sheet.cell(r, android_file_key_col).value
 
-for fk in iF:
-	iF[fk].close()
+					if file == u"":
+						file = android_default_name
+
+					if lang == main_lang_key:
+						aLang = u""
+					else:
+						aLang = u"-" + android_locale_map.get(lang, lang)
+
+					fk = (folder, aLang, file)
+					if fk not in aF:
+						aPath = os.path.join(sys.argv[2], u"android-strings/{0}values{1}/{2}.xml".format(folder, aLang, file).encode("utf-8"))
+						d = os.path.dirname(aPath)
+						if not os.path.exists(d):
+							os.makedirs(d)
+						aF[fk] = open(aPath, "w")
+						aF[fk].write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n");
+
+					aF[fk].write(u"\t<string name=\"{0}\">{1}</string>\n".format(aKey, aescape(u"".join(va))).encode("utf-8"))
+
+				if iKey != "":
+					va = split("%[^%]+%", value)
+					for i in range(1, len(va), 2):
+						ai = argMap[va[i]]
+						if ai < len(iArg):
+							arg = iArg[ai]
+						else:
+							print("Sheet \"{0}\": Undefined arg for iOS key: {1}[{2}]".format(sheet.name, iKey, va[i]))
+							sys.exit()
+						va[i] = u"%{0}${1}".format(ai+1, arg)
+
+					for i in range(0, len(va), 2):
+						va[i] = va[i].replace(u"%", u"%%")
+
+					if ios_file_key_col < 0:
+						file = ios_default_name
+					else:
+						file = sheet.cell(r, ios_file_key_col).value
+
+					if file == u"":
+						file = ios_default_name
+
+					iLang = ios_locale_map.get(lang, lang)
+					fk = (iLang, file)
+					if fk not in iF:
+						iPath = os.path.join(sys.argv[2], u"ios-strings/{0}.lproj/{1}.strings".format(iLang, file).encode("utf-8"))
+						d = os.path.dirname(iPath)
+						if not os.path.exists(d):
+							os.makedirs(d)
+						iF[fk] = open(iPath, "w")
+
+					iF[fk].write(u"\"{0}\" = \"{1}\";\n".format(iKey, iescape(u"".join(va))).encode("utf-8"))
+
+	for fk in aF:
+		aF[fk].write("</resources>\n");
+		aF[fk].close()
+
+	for fk in iF:
+		iF[fk].close()
+
+if __name__ == "__main__":
+	main_lang_key = u"en"
+	lang_key = [u"tw", u"cn", u"jp", u"kr", u"ru", u"de", u"fr", u"it", u"es", u"pt", u"hu", u"cz", u"nl", u"pl", u"se", u"el"]
+	skip_sheet = [0,1,2]
+
+	conv(sys.argv[1], main_lang_key, lang_key, skip_sheet)
