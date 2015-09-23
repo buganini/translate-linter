@@ -52,7 +52,7 @@ ios_locale_map = {"tw":"zh-Hant", "cn":"zh-Hans", "jp":"ja", "kr":"ko", "cz":"cs
 android_locale_map = {"tw":"zh-rTW", "cn":"zh-rCN", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv", "pt-BR":"pt-rBR"}
 
 
-def conv(xls_path, main_lang_key="en", lang_key = [], skip_sheet = []):
+def conv(xls_path, output_dir, main_lang_key="en", lang_key = [], skip_sheet = []):
 	aF={}
 	iF={}
 	aKeys = set()
@@ -190,7 +190,7 @@ def conv(xls_path, main_lang_key="en", lang_key = [], skip_sheet = []):
 
 					fk = (folder, aLang, file)
 					if fk not in aF:
-						aPath = os.path.join(sys.argv[2], u"android-strings/{0}values{1}/{2}.xml".format(folder, aLang, file).encode("utf-8"))
+						aPath = os.path.join(output_dir, u"android-strings/{0}values{1}/{2}.xml".format(folder, aLang, file).encode("utf-8"))
 						d = os.path.dirname(aPath)
 						if not os.path.exists(d):
 							os.makedirs(d)
@@ -224,7 +224,7 @@ def conv(xls_path, main_lang_key="en", lang_key = [], skip_sheet = []):
 					iLang = ios_locale_map.get(lang, lang)
 					fk = (iLang, file)
 					if fk not in iF:
-						iPath = os.path.join(sys.argv[2], u"ios-strings/{0}.lproj/{1}.strings".format(iLang, file).encode("utf-8"))
+						iPath = os.path.join(output_dir, u"ios-strings/{0}.lproj/{1}.strings".format(iLang, file).encode("utf-8"))
 						d = os.path.dirname(iPath)
 						if not os.path.exists(d):
 							os.makedirs(d)
@@ -244,4 +244,4 @@ if __name__ == "__main__":
 	lang_key = [u"tw", u"cn", u"jp", u"kr", u"ru", u"de", u"fr", u"it", u"es", u"pt", u"hu", u"cz", u"nl", u"pl", u"se", u"el"]
 	skip_sheet = [0,1,2]
 
-	conv(sys.argv[1], main_lang_key, lang_key, skip_sheet)
+	conv(sys.argv[1], sys.argv[2], main_lang_key, lang_key, skip_sheet)
