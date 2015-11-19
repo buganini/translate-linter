@@ -94,21 +94,21 @@ def conv(xls_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip_s
 			lang_key_col[value] = c
 
 		if main_lang_key_col < 0:
-			outlog.write("Main language key column not found in sheet {0}\n".format(sheet.number))
-			sys.exit(1)
+			outlog.write("[Error] Main language key column not found in sheet {0}\n".format(sheet.number))
+			return
 
 		if android_key_col < 0:
-			outlog.write(u"Android key column not found in sheet {0}\n".format(sheet.number).encode("utf-8"))
-			sys.exit(1)
+			outlog.write(u"[Error] Android key column not found in sheet {0}\n".format(sheet.number).encode("utf-8"))
+			return
 
 		if ios_key_col < 0:
-			outlog.write(u"iOS key column not found\n".encode("utf-8"))
-			sys.exit(1)
+			outlog.write(u"[Error] iOS key column not found\n".encode("utf-8"))
+			return
 
 		for lang in lang_key:
 			if lang not in lang_key_col:
-				outlog.write(u"{0} key column not found\n".format(lang).encode("utf-8"))
-				sys.exit(1)
+				outlog.write(u"[Error] {0} key column not found\n".format(lang).encode("utf-8"))
+				return
 
 
 		for r in range(1, sheet.nrows):
@@ -145,14 +145,14 @@ def conv(xls_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip_s
 			if aKey != "":
 				kk = (folder, aKey)
 				if kk in aKeys:
-					outlog.write(u"Duplicated Android key: {0}\n".format(kk).encode("utf-8"))
+					outlog.write(u"[Warning] Duplicated Android key: {0}\n".format(kk).encode("utf-8"))
 				else:
 					aKeys.add(kk)
 
 			if iKey != "":
 				kk = iKey
 				if kk in iKeys:
-					outlog.write(u"Duplicated iOS key: {0}\n".format(kk).encode("utf-8"))
+					outlog.write(u"[Warning] Duplicated iOS key: {0}\n".format(kk).encode("utf-8"))
 				else:
 					iKeys.add(kk)
 
@@ -164,14 +164,16 @@ def conv(xls_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip_s
 				if aKey != "":
 					va = split("%[^%]+%", value)
 					for i in range(1, len(va), 2):
-						ai = argMap[va[i]]
-						if ai < len(aArg):
-							arg = aArg[ai]
+						if va[i] in argMap:
+							ai = argMap[va[i]]
+							if ai < len(aArg):
+								arg = aArg[ai]
+							else:
+								outlog.write("[Error] Sheet \"{0}\": Undefined arg for Android key: {1}[{2}]\n".format(sheet.name, aKey, va[i]).encode("utf-8"))
+								return
+							va[i] = u"%{0}${1}".format(ai+1, arg)
 						else:
-							outlog.write("Sheet \"{0}\": Undefined arg for Android key: {1}[{2}]\n".format(sheet.name, aKey, va[i]).encode("utf-8"))
-							sys.exit()
-						va[i] = u"%{0}${1}".format(ai+1, arg)
-
+							outlog.write(u"[Error] Unexpected variable {0} for Android key {1} in language {2} at sheet {3}\n".format(va[i], aKey, lang, sheet.name).encode("utf-8"))
 					for i in range(0, len(va), 2):
 						va[i] = va[i].replace(u"%", u"%%")
 
@@ -190,7 +192,7 @@ def conv(xls_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip_s
 
 					fk = (folder, aLang, file)
 					if fk not in aF:
-						aPath = os.path.join(output_dir, u"android-strings/{0}values{1}/{2}.xml".format(folder, aLang, file).encode("utf-8"))
+						aPath = os.path.join(output_dir, "android-strings/{0}values{1}/{2}.xml".format(folder.encode("utf-8"), aLang.encode("utf-8"), file.encode("utf-8")))
 						d = os.path.dirname(aPath)
 						if not os.path.exists(d):
 							os.makedirs(d)
@@ -202,14 +204,16 @@ def conv(xls_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip_s
 				if iKey != "":
 					va = split("%[^%]+%", value)
 					for i in range(1, len(va), 2):
-						ai = argMap[va[i]]
-						if ai < len(iArg):
-							arg = iArg[ai]
+						if va[i] in argMap:
+							ai = argMap[va[i]]
+							if ai < len(iArg):
+								arg = iArg[ai]
+							else:
+								outlog.write("[Error] Sheet \"{0}\": Undefined arg for iOS key: {1}[{2}]\n".format(sheet.name, iKey, va[i]).encode("utf-8"))
+								return
+							va[i] = u"%{0}${1}".format(ai+1, arg)
 						else:
-							outlog.write("Sheet \"{0}\": Undefined arg for iOS key: {1}[{2}]\n".format(sheet.name, iKey, va[i]).encode("utf-8"))
-							sys.exit()
-						va[i] = u"%{0}${1}".format(ai+1, arg)
-
+							outlog.write(u"[Error] Unexpected variable {0} for iOS key {1} in language {2} at sheet {3}\n".format(va[i], iKey, lang, sheet.name).encode("utf-8"))
 					for i in range(0, len(va), 2):
 						va[i] = va[i].replace(u"%", u"%%")
 
@@ -224,7 +228,7 @@ def conv(xls_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip_s
 					iLang = ios_locale_map.get(lang, lang)
 					fk = (iLang, file)
 					if fk not in iF:
-						iPath = os.path.join(output_dir, u"ios-strings/{0}.lproj/{1}.strings".format(iLang, file).encode("utf-8"))
+						iPath = os.path.join(output_dir, "ios-strings/{0}.lproj/{1}.strings".format(iLang.encode("utf-8"), file.encode("utf-8")))
 						d = os.path.dirname(iPath)
 						if not os.path.exists(d):
 							os.makedirs(d)
