@@ -13,33 +13,33 @@ import json
 WHITESPACE = ' \n\t'  # Whitespace that we collapse.
 MULTIWHITESPACE = re.compile('[ \n\t]{2}(?!\\\\n)')
 def android_escape(text, quote_wrapping_whitespaces=True):
-    """Escape all the characters which need to be escaped in an Android XML
-    file.
-    :param text: Text to escape
-    :param quote_wrapping_whitespaces: If True, heading and trailing
-           whitespaces will be quoted placing the entire resulting text in
-           double quotes.
-    """
-    if text is None:
-        return
-    if len(text) == 0:
-        return ''
-    text = text.replace('\\', '\\\\')
-    # This will add non intrusive real newlines to
-    # ones in translation improving readability of result
-    text = text.replace('\n', '\n\\n')
-    text = text.replace('\t', '\\t')
-    text = text.replace('\'', '\\\'')
-    text = text.replace('"', '\\"')
+	"""Escape all the characters which need to be escaped in an Android XML
+	file.
+	:param text: Text to escape
+	:param quote_wrapping_whitespaces: If True, heading and trailing
+		   whitespaces will be quoted placing the entire resulting text in
+		   double quotes.
+	"""
+	if text is None:
+		return
+	if len(text) == 0:
+		return ''
+	text = text.replace('\\', '\\\\')
+	# This will add non intrusive real newlines to
+	# ones in translation improving readability of result
+	text = text.replace('\n', '\n\\n')
+	text = text.replace('\t', '\\t')
+	text = text.replace('\'', '\\\'')
+	text = text.replace('"', '\\"')
 
-    # @ needs to be escaped at start
-    if text.startswith('@'):
-        text = '\\@' + text[1:]
-    # Quote strings with more whitespace
-    if ((quote_wrapping_whitespaces and (text[0] in WHITESPACE or text[-1] in WHITESPACE))
-            or len(MULTIWHITESPACE.findall(text))) > 0:
-        return '"%s"' % text
-    return text
+	# @ needs to be escaped at start
+	if text.startswith('@'):
+		text = '\\@' + text[1:]
+	# Quote strings with more whitespace
+	if ((quote_wrapping_whitespaces and (text[0] in WHITESPACE or text[-1] in WHITESPACE))
+			or len(MULTIWHITESPACE.findall(text))) > 0:
+		return '"%s"' % text
+	return text
 
 def split(pat, s):
 	ret = []
