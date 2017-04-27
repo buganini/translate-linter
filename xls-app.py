@@ -1,14 +1,45 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# python xls-app.py dch.xls output/
+# python3 xls-app.py dch.xls output/
 
 import os
 import sys
 import xlrd
 import re
-from translate.storage.aresource import AndroidResourceUnit
 from xml.sax.saxutils import escape as xml_escape
 import json
+
+# https://github.com/translate/translate/blob/master/translate/storage/aresource.py#L219
+WHITESPACE = ' \n\t'  # Whitespace that we collapse.
+MULTIWHITESPACE = re.compile('[ \n\t]{2}(?!\\\\n)')
+def android_escape(text, quote_wrapping_whitespaces=True):
+    """Escape all the characters which need to be escaped in an Android XML
+    file.
+    :param text: Text to escape
+    :param quote_wrapping_whitespaces: If True, heading and trailing
+           whitespaces will be quoted placing the entire resulting text in
+           double quotes.
+    """
+    if text is None:
+        return
+    if len(text) == 0:
+        return ''
+    text = text.replace('\\', '\\\\')
+    # This will add non intrusive real newlines to
+    # ones in translation improving readability of result
+    text = text.replace('\n', '\n\\n')
+    text = text.replace('\t', '\\t')
+    text = text.replace('\'', '\\\'')
+    text = text.replace('"', '\\"')
+
+    # @ needs to be escaped at start
+    if text.startswith('@'):
+        text = '\\@' + text[1:]
+    # Quote strings with more whitespace
+    if ((quote_wrapping_whitespaces and (text[0] in WHITESPACE or text[-1] in WHITESPACE))
+            or len(MULTIWHITESPACE.findall(text))) > 0:
+        return '"%s"' % text
+    return text
 
 def split(pat, s):
 	ret = []
@@ -27,214 +58,196 @@ def split(pat, s):
 
 def aescape(s):
 	s = xml_escape(s)
-	s = AndroidResourceUnit.escape(s)
-	if s in (u"@", u"?"):
-		s = u"\\" + s
+	s = android_escape(s)
+	if s in ("@", "?"):
+		s = "\\" + s
 	return s
 
 def iescape(s):
 	return json.dumps(s, ensure_ascii=False)[1:-1]
 
-def strip(s):
+def strip_note(s):
 	return re.sub(r"\([^()]*\)", "", s).strip()
 
-android_key = u"Android"
-android_folder_key = u"Android folder"
-android_file_key = u"Android file"
-android_arg_key = u"Android arg"
-android_default_name = u"strings"
-ios_key = u"iOS"
-ios_file_key = u"iOS file"
-ios_arg_key = u"iOS arg"
-ios_default_name = u"Localizable"
+global_key = "Global Key"
+android_key = "Android"
+android_folder_key = "Android folder"
+android_file_key = "Android file"
+android_arg_key = "Android arg"
+android_default_name = "strings"
+ios_key = "iOS"
+ios_file_key = "iOS file"
+ios_arg_key = "iOS arg"
+ios_default_name = "Localizable"
 
 ios_locale_map = {"tw":"zh-Hant", "cn":"zh-Hans", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv"}
 android_locale_map = {"tw":"zh-rTW", "cn":"zh-rCN", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv", "pt-BR":"pt-rBR"}
 
+ARGUMENT = r"\{\{.*?\}\}"
 
-def conv(xls_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip_sheet = []):
+class Sheet():
+	def __init__(self, i, name, sheet):
+		self.number = i
+		self.name = name
+		self.sheet = sheet
+		self.nrows = sheet.nrows - 1
+		self.ncols = sheet.ncols
+		self.cols = {}
+		self.dat = {}
+		for c in range(0, sheet.ncols):
+			value = strip_note(sheet.cell(0, c).value)
+			self.cols[value] = c
+
+	def hasCol(self, c):
+		return c in self.cols
+
+	def get(self, r, c, default=""):
+		try:
+			return self.dat[r,c]
+		except:
+			if type(c) is str:
+				if c in self.cols:
+					v = self.sheet.cell(r+1, self.cols[c]).value.strip()
+					if v == "":
+						return default
+					else:
+						return v
+				else:
+					return default
+			else:
+				return self.sheet.cell(r+1, c).value.strip()
+
+	def set(self, r, c, v):
+		self.dat[r,c] = v
+
+class Reader():
+	def __init__(self, infile, skip_sheet):
+		self.xls = xlrd.open_workbook(infile)
+		self._sheets = []
+		for i,sheet in enumerate(self.xls.sheets()):
+			if i in skip_sheet:
+				continue
+			self._sheets.append(Sheet(i, sheet.name, sheet))
+
+	def sheets(self):
+		return self._sheets
+
+def conv(input_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip_sheet = []):
 	aF={}
 	iF={}
 	aKeys = set()
 	iKeys = set()
 
-	xls = xlrd.open_workbook(xls_path)
+	reader = Reader(input_path, skip_sheet)
 
-	for sheet in xls.sheets():
-		if sheet.number in skip_sheet:
-			continue
-
-		lang_key_col = {}
-		main_lang_key_col = -1
-		android_key_col = -1
-		android_folder_key_col = -1
-		android_file_key_col = -1
-		android_arg_key_col = -1
-		ios_key_col = -1
-		ios_file_key_col = -1
-		ios_arg_key_col = -1
-		for c in range(0, sheet.ncols):
-			value = strip(sheet.cell(0, c).value)
-			if value == android_key:
-				android_key_col = c
-			if value == android_folder_key:
-				android_folder_key_col = c
-			if value == android_file_key:
-				android_file_key_col = c
-			if value == android_arg_key:
-				android_arg_key_col = c
-			if value == ios_key:
-				ios_key_col = c
-			if value == ios_file_key:
-				ios_file_key_col = c
-			if value == ios_arg_key:
-				ios_arg_key_col = c
-			if value == main_lang_key:
-				main_lang_key_col = c
-			lang_key_col[value] = c
-
-		if main_lang_key_col < 0:
+	for sheet in reader.sheets():
+		if not sheet.hasCol(main_lang_key):
 			outlog.write("[Error] Main language key column not found in sheet {0}\n".format(sheet.number))
 			return
 
-		if android_key_col < 0:
-			outlog.write(u"[Error] Android key column not found in sheet {0}\n".format(sheet.number).encode("utf-8"))
-			return
-
-		if ios_key_col < 0:
-			outlog.write(u"[Error] iOS key column not found\n".encode("utf-8"))
-			return
-
-		for lang in lang_key:
-			if lang not in lang_key_col:
-				outlog.write(u"[Error] {0} key column not found\n".format(lang).encode("utf-8"))
-				return
-
-
-		for r in range(1, sheet.nrows):
-			argMap = {}
-			value = sheet.cell(r, main_lang_key_col).value.strip()
-			keys = split("%[^%]+%", value)[1::2]
+	for sheet in reader.sheets():
+		for r in range(sheet.nrows):
+			argIndex = {}
+			value = sheet.get(r, main_lang_key)
+			keys = split(ARGUMENT, value)[1::2]
 			pos = 0
 			for k in keys:
-				if k not in argMap:
-					argMap[k] = pos
+				if k not in argIndex:
+					argIndex[k] = pos
 					pos += 1
 
-			if android_folder_key_col < 0:
-				folder = u""
-			else:
-				folder = unicode(sheet.cell(r, android_folder_key_col).value).strip(u"/ ")
+			folder = sheet.get(r, android_folder_key).strip("/")
 
-			if folder != u"":
-				folder += u"/"
+			if folder != "":
+				folder += "/"
 
-			aKey = sheet.cell(r, android_key_col).value
-			iKey = sheet.cell(r, ios_key_col).value
+			aKey = sheet.get(r, android_key)
+			iKey = sheet.get(r, ios_key)
 
-			if android_arg_key_col < 0:
-				aArg = []
-			else:
-				aArg = sheet.cell(r, android_arg_key_col).value.split(u",")
-
-			if ios_arg_key_col < 0:
-				iArg = []
-			else:
-				iArg = sheet.cell(r, ios_arg_key_col).value.split(u",")
+			aArg = sheet.get(r, android_arg_key).split(",")
+			iArg = sheet.get(r, ios_arg_key).split(",")
 
 			if aKey != "":
 				kk = (folder, aKey)
 				if kk in aKeys:
-					outlog.write(u"[Warning] Duplicated Android key: {0}\n".format(kk).encode("utf-8"))
+					outlog.write("[Warning] Duplicated Android key: {0}\n".format(kk))
 				else:
 					aKeys.add(kk)
 
 			if iKey != "":
 				kk = iKey
 				if kk in iKeys:
-					outlog.write(u"[Warning] Duplicated iOS key: {0}\n".format(kk).encode("utf-8"))
+					outlog.write("[Warning] Duplicated iOS key: {0}\n".format(kk))
 				else:
 					iKeys.add(kk)
 
 			for lang in [main_lang_key] + lang_key:
-				value = sheet.cell(r, lang_key_col[lang]).value.strip()
-				if value == u"":
+				value = sheet.get(r, lang)
+				if value == "":
 					continue
 
 				if aKey != "":
-					va = split("%[^%]+%", value)
+					va = split(ARGUMENT, value)
 					for i in range(1, len(va), 2):
-						if va[i] in argMap:
-							ai = argMap[va[i]]
+						if va[i] in argIndex:
+							ai = argIndex[va[i]]
 							if ai < len(aArg):
 								arg = aArg[ai]
 							else:
-								outlog.write("[Error] Sheet \"{0}\": Undefined arg for Android key: {1}[{2}]\n".format(sheet.name, aKey, va[i]).encode("utf-8"))
+								outlog.write("[Error] Sheet \"{0}\": Undefined arg for Android key: {1}[{2}]\n".format(sheet.name, aKey, va[i]))
 								return
-							va[i] = u"%{0}${1}".format(ai+1, arg)
+							va[i] = "%{0}${1}".format(ai+1, arg)
 						else:
-							outlog.write(u"[Error] Unexpected variable {0} for Android key {1} in language {2} at sheet {3}\n".format(va[i], aKey, lang, sheet.name).encode("utf-8"))
+							outlog.write("[Error] Unexpected variable {0} for Android key {1} in language {2} at sheet {3}\n".format(va[i], aKey, lang, sheet.name))
 					for i in range(0, len(va), 2):
-						va[i] = va[i].replace(u"%", u"%%")
+						va[i] = va[i].replace("%", "%%")
 
-					if android_file_key_col < 0:
-						file = android_default_name
-					else:
-						file = sheet.cell(r, android_file_key_col).value
-
-					if file == u"":
-						file = android_default_name
+					file = sheet.get(r, android_file_key, android_default_name)
 
 					if lang == main_lang_key:
-						aLang = u""
+						aLang = ""
 					else:
-						aLang = u"-" + android_locale_map.get(lang, lang)
+						aLang = "-" + android_locale_map.get(lang, lang)
 
 					fk = (folder, aLang, file)
 					if fk not in aF:
-						aPath = os.path.join(output_dir, "android-strings/{0}values{1}/{2}.xml".format(folder.encode("utf-8"), aLang.encode("utf-8"), file.encode("utf-8")))
+						aPath = os.path.join(output_dir, "android-strings/{0}values{1}/{2}.xml".format(folder, aLang, file))
 						d = os.path.dirname(aPath)
 						if not os.path.exists(d):
 							os.makedirs(d)
-						aF[fk] = open(aPath, "w")
+						aF[fk] = open(aPath, "w", encoding="utf-8")
 						aF[fk].write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n");
 
-					aF[fk].write(u"\t<string name=\"{0}\">{1}</string>\n".format(aKey, aescape(u"".join(va))).encode("utf-8"))
+					aF[fk].write("\t<string name=\"{0}\">{1}</string>\n".format(aKey, aescape("".join(va))))
 
 				if iKey != "":
-					va = split("%[^%]+%", value)
+					va = split(ARGUMENT, value)
 					for i in range(1, len(va), 2):
-						if va[i] in argMap:
-							ai = argMap[va[i]]
+						if va[i] in argIndex:
+							ai = argIndex[va[i]]
 							if ai < len(iArg):
 								arg = iArg[ai]
 							else:
-								outlog.write("[Error] Sheet \"{0}\": Undefined arg for iOS key: {1}[{2}]\n".format(sheet.name, iKey, va[i]).encode("utf-8"))
+								outlog.write("[Error] Sheet \"{0}\": Undefined arg for iOS key: {1}[{2}]\n".format(sheet.name, iKey, va[i]))
 								return
-							va[i] = u"%{0}${1}".format(ai+1, arg)
+							va[i] = "%{0}${1}".format(ai+1, arg)
 						else:
-							outlog.write(u"[Error] Unexpected variable {0} for iOS key {1} in language {2} at sheet {3}\n".format(va[i], iKey, lang, sheet.name).encode("utf-8"))
+							outlog.write("[Error] Unexpected variable {0} for iOS key {1} in language {2} at sheet {3}\n".format(va[i], iKey, lang, sheet.name))
 					for i in range(0, len(va), 2):
-						va[i] = va[i].replace(u"%", u"%%")
+						va[i] = va[i].replace("%", "%%")
 
-					if ios_file_key_col < 0:
-						file = ios_default_name
-					else:
-						file = sheet.cell(r, ios_file_key_col).value
-
-					if file == u"":
-						file = ios_default_name
+					file = sheet.get(r, ios_file_key, ios_default_name)
 
 					iLang = ios_locale_map.get(lang, lang)
 					fk = (iLang, file)
 					if fk not in iF:
-						iPath = os.path.join(output_dir, "ios-strings/{0}.lproj/{1}.strings".format(iLang.encode("utf-8"), file.encode("utf-8")))
+						iPath = os.path.join(output_dir, "ios-strings/{0}.lproj/{1}.strings".format(iLang, file))
 						d = os.path.dirname(iPath)
 						if not os.path.exists(d):
 							os.makedirs(d)
-						iF[fk] = open(iPath, "w")
+						iF[fk] = open(iPath, "w", encoding="utf-8")
 
-					iF[fk].write(u"\"{0}\" = \"{1}\";\n".format(iKey, iescape(u"".join(va))).encode("utf-8"))
+					iF[fk].write("\"{0}\" = \"{1}\";\n".format(iKey, iescape("".join(va))))
 
 	for fk in aF:
 		aF[fk].write("</resources>\n");
@@ -244,8 +257,8 @@ def conv(xls_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip_s
 		iF[fk].close()
 
 if __name__ == "__main__":
-	main_lang_key = u"en"
-	lang_key = [u"tw", u"cn", u"jp", u"kr", u"ru", u"de", u"fr", u"it", u"es", u"pt", u"hu", u"cz", u"nl", u"pl", u"se", u"el"]
-	skip_sheet = [0,1,2]
+	main_lang_key = "en"
+	lang_key = ["tw"]
+	skip_sheet = []
 
 	conv(sys.argv[1], sys.argv[2], sys.stdout, main_lang_key, lang_key, skip_sheet)
