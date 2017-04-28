@@ -70,7 +70,7 @@ def iescape(s):
 def strip_note(s):
 	return re.sub(r"\([^()]*\)", "", s).strip()
 
-global_key = "Global Key"
+ref_key = "Ref Key"
 android_key = "Android"
 android_folder_key = "Android folder"
 android_file_key = "Android file"
@@ -167,12 +167,12 @@ def conv(input_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip
 			outlog.write("[Error] Main language key column not found in sheet {0}\n".format(sheet.number))
 			return
 
-	global_key_map = {}
+	ref_key_map = {}
 	for sheet in reader.sheets():
 		for r in range(sheet.nrows):
-			value = sheet.get(r, global_key)
+			value = sheet.get(r, ref_key)
 			if value:
-				global_key_map[value] = r
+				ref_key_map[value] = r
 
 	for sheet in reader.sheets():
 		for r in range(sheet.nrows):
@@ -201,13 +201,13 @@ def conv(input_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip
 				for i, token in list(reversed(list(enumerate(tokens))))[0::2]:
 					va = split(BACKREF, token)
 					for j,ref in list(reversed(list(enumerate(va))))[1::2]:
-						if ref in global_key_map:
-							va = va[:j] + [Null()] + sheet.get(global_key_map[ref], lang) + [Null()] + va[j+1:]
+						if ref in ref_key_map:
+							va = va[:j] + [Null()] + sheet.get(ref_key_map[ref], lang) + [Null()] + va[j+1:]
 
 							for key,arg_key in ((android_key, android_arg_key), (ios_key, ios_arg_key)):
 								if not sheet.get(r, key):
 									continue
-								args = sheet.get(global_key_map[ref], arg_key)
+								args = sheet.get(ref_key_map[ref], arg_key)
 								if args:
 									this_args = sheet.get(r, arg_key)
 									this_args = this_args[:i] + args + this_args[i+1:]
