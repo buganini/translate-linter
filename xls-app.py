@@ -48,8 +48,9 @@ def split(pat, s):
 		match = re.search(pat, s)
 		if match:
 			span = match.span()
+			span1 = match.span(1)
 			ret.append(s[lastPos:span[0]])
-			ret.append(s[span[0]:span[1]])
+			ret.append(s[span1[0]:span1[1]])
 			s = s[span[1]:]
 			lastPos = 0
 		else:
@@ -83,7 +84,24 @@ ios_default_name = "Localizable"
 ios_locale_map = {"tw":"zh-Hant", "cn":"zh-Hans", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv"}
 android_locale_map = {"tw":"zh-rTW", "cn":"zh-rCN", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv", "pt-BR":"pt-rBR"}
 
-ARGUMENT = r"\{\{.*?\}\}"
+ARGUMENT = r"\{\{(.*?)\}\}"
+BACKREF = r"%(.*?)%"
+
+class Null(str):
+	def split(self, *args):
+		return self
+
+	def replace(self, *args):
+		return ""
+
+	def __str__(self):
+		return ""
+
+	def __bool__(self):
+		return False
+
+	def __repr__(self):
+		return "<null>"
 
 class Sheet():
 	def __init__(self, i, name, sheet):
@@ -101,7 +119,7 @@ class Sheet():
 	def hasCol(self, c):
 		return c in self.cols
 
-	def get(self, r, c, default=""):
+	def get(self, r, c, default=Null()):
 		try:
 			return self.dat[r,c]
 		except:
@@ -115,7 +133,11 @@ class Sheet():
 				else:
 					return default
 			else:
-				return self.sheet.cell(r+1, c).value.strip()
+				v = self.sheet.cell(r+1, c).value.strip()
+				if v == "":
+					return default
+				else:
+					return v
 
 	def set(self, r, c, v):
 		self.dat[r,c] = v
@@ -145,16 +167,66 @@ def conv(input_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip
 			outlog.write("[Error] Main language key column not found in sheet {0}\n".format(sheet.number))
 			return
 
+	global_key_map = {}
+	for sheet in reader.sheets():
+		for r in range(sheet.nrows):
+			value = sheet.get(r, global_key)
+			if value:
+				global_key_map[value] = r
+
+	for sheet in reader.sheets():
+		for r in range(sheet.nrows):
+			aArg = sheet.get(r, android_arg_key).split(",")
+			if aArg:
+				sheet.set(r, android_arg_key, aArg)
+			else:
+				sheet.set(r, android_arg_key, [])
+			iArg = sheet.get(r, ios_arg_key).split(",")
+			if iArg:
+				sheet.set(r, ios_arg_key, iArg)
+			else:
+				sheet.set(r, ios_arg_key, [])
+
+	for sheet in reader.sheets():
+		for r in range(sheet.nrows):
+			for lang in [main_lang_key] + lang_key:
+				value = sheet.get(r, lang)
+				tokens = split(ARGUMENT, value)
+				sheet.set(r, lang, tokens)
+
+	for sheet in reader.sheets():
+		for r in range(sheet.nrows):
+			for lang in [main_lang_key] + lang_key:
+				tokens = sheet.get(r, lang)
+				for i, token in list(reversed(list(enumerate(tokens))))[0::2]:
+					va = split(BACKREF, token)
+					for j,ref in list(reversed(list(enumerate(va))))[1::2]:
+						if ref in global_key_map:
+							va = va[:j] + [Null()] + sheet.get(global_key_map[ref], lang) + [Null()] + va[j+1:]
+
+							for key,arg_key in ((android_key, android_arg_key), (ios_key, ios_arg_key)):
+								if not sheet.get(r, key):
+									continue
+								args = sheet.get(global_key_map[ref], arg_key)
+								if args:
+									this_args = sheet.get(r, arg_key)
+									this_args = this_args[:i] + args + this_args[i+1:]
+									sheet.set(r, arg_key, this_args)
+						else:
+							outlog.write("[Error] Back reference {0} not found in language {1} at sheet {2}\n".format(ref, lang, sheet.name))
+							return
+					tokens = tokens[:i] + va + tokens[i+1:]
+				sheet.set(r, lang, tokens)
+
 	for sheet in reader.sheets():
 		for r in range(sheet.nrows):
 			argIndex = {}
-			value = sheet.get(r, main_lang_key)
-			keys = split(ARGUMENT, value)[1::2]
-			pos = 0
-			for k in keys:
-				if k not in argIndex:
-					argIndex[k] = pos
-					pos += 1
+			tokens = sheet.get(r, main_lang_key)
+			for key in tokens[1::2]:
+				if not key:
+					continue
+				if key not in argIndex:
+					argIndex[key] = len(argIndex)
 
 			folder = sheet.get(r, android_folder_key).strip("/")
 
@@ -164,17 +236,17 @@ def conv(input_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip
 			aKey = sheet.get(r, android_key)
 			iKey = sheet.get(r, ios_key)
 
-			aArg = sheet.get(r, android_arg_key).split(",")
-			iArg = sheet.get(r, ios_arg_key).split(",")
+			aArg = sheet.get(r, android_arg_key)
+			iArg = sheet.get(r, ios_arg_key)
 
-			if aKey != "":
+			if aKey:
 				kk = (folder, aKey)
 				if kk in aKeys:
 					outlog.write("[Warning] Duplicated Android key: {0}\n".format(kk))
 				else:
 					aKeys.add(kk)
 
-			if iKey != "":
+			if iKey:
 				kk = iKey
 				if kk in iKeys:
 					outlog.write("[Warning] Duplicated iOS key: {0}\n".format(kk))
@@ -183,12 +255,16 @@ def conv(input_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip
 
 			for lang in [main_lang_key] + lang_key:
 				value = sheet.get(r, lang)
-				if value == "":
+				if not value:
+					continue
+				if len(value)==1 and not value[0]:
 					continue
 
-				if aKey != "":
-					va = split(ARGUMENT, value)
+				if aKey:
+					va = list(value)
 					for i in range(1, len(va), 2):
+						if not va[i]:
+							continue
 						if va[i] in argIndex:
 							ai = argIndex[va[i]]
 							if ai < len(aArg):
@@ -218,11 +294,13 @@ def conv(input_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip
 						aF[fk] = open(aPath, "w", encoding="utf-8")
 						aF[fk].write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n");
 
-					aF[fk].write("\t<string name=\"{0}\">{1}</string>\n".format(aKey, aescape("".join(va))))
+					aF[fk].write("    <string name=\"{0}\">{1}</string>\n".format(aKey, aescape("".join(va))))
 
-				if iKey != "":
-					va = split(ARGUMENT, value)
+				if iKey:
+					va = list(value)
 					for i in range(1, len(va), 2):
+						if not va[i]:
+							continue
 						if va[i] in argIndex:
 							ai = argIndex[va[i]]
 							if ai < len(iArg):
