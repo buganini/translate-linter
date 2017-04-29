@@ -81,7 +81,7 @@ ios_file_key = "iOS file"
 ios_arg_key = "iOS arg"
 ios_default_name = "Localizable"
 
-ios_locale_map = {"tw":"zh-Hant", "cn":"zh-Hans", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv"}
+base_ios_locale_map = {"tw":"zh-Hant", "cn":"zh-Hans", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv"}
 android_locale_map = {"tw":"zh-rTW", "cn":"zh-rCN", "jp":"ja", "kr":"ko", "cz":"cs", "se":"sv", "pt-BR":"pt-rBR"}
 
 ARGUMENT = r"\{\{(.*?)\}\}"
@@ -159,6 +159,8 @@ def conv(input_path, output_dir, outlog, main_lang_key="en", lang_key = [], skip
 	iF={}
 	aKeys = set()
 	iKeys = set()
+	ios_locale_map = dict(base_ios_locale_map)
+	ios_locale_map[main_lang_key] = "Base"
 
 	reader = Reader(input_path, skip_sheet)
 
